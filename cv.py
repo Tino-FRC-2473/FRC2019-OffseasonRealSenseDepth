@@ -30,7 +30,8 @@ class VisionTargetDetector:
 			# if input is a path
 			self.input = cv2.VideoCapture(input)
 
-		frame = self.get_frame()
+		
+		frame, _ = self.get_frame()
 
 		# height of a vision target
 		self.TARGET_HEIGHT = 5.5 * math.cos(math.radians(14.5)) + 2 * math.sin(math.radians(14.5))
@@ -67,22 +68,19 @@ class VisionTargetDetector:
 	# returns a frame corresponding to the input type
 	def get_frame(self):
 
-		frame = None
-		try:
-		    # if input is an image, use cv2.imread()
-			if imghdr.what(self.input_path) is not None:
-				frame = cv2.imread(self.input_path)
-			# if input is a video, use VideoCapture()
-			else:
-				_, frame = self.input.read()
-		except:
-			# if input is a camera port, use VideoCapture()
-			_, frame = self.input.read()
+		frames = self.pipeline.wait_for_frames()
+		depth_frame = frames.get_depth_frame()
+		color_frame = frames.get_color_frame()
+		if not depth_frame or not color_frame:
+			return
+		depth_image = np.asanyarray(depth_frame.get_data())
+		color_image = np.asanyarray(color_frame.get_data())
+
 
 		
 
 		
-		return frame
+		return color_image, depth_image
 
 	# returns the closest pair of vision targets
 	def get_closest_pair(self, pairs):
@@ -115,16 +113,11 @@ class VisionTargetDetector:
 
 	def run_cv(self):
 
-		frame = self.get_frame()
+		#frame = self.get_frame()
 		
-		frames = self.pipeline.wait_for_frames()
-		depth_frame = frames.get_depth_frame()
-		color_frame = frames.get_color_frame()
-		if not depth_frame or not color_frame:
-			return
-		depth_image = np.asanyarray(depth_frame.get_data())
-		color_image = np.asanyarray(color_frame.get_data())
+		color_image, depth_image = self.get_frame();
 
+		frame = color_image
 		depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
 
 		images = np.hstack((color_image, depth_colormap))
@@ -167,6 +160,8 @@ class VisionTargetDetector:
 			cv2.drawContours(frame, [pair.left_rect.box], 0, (255,0,0), 2)
 			cv2.drawContours(frame, [pair.right_rect.box], 0, (255,0,0), 2)
 
+		dist = depth_image.get_distance(self.get_center().x,self.get_center().y)
+		print("dist: ", dist)
 		# show windows
 		cv2.imshow("contours: " + str(self.input_path), mask)
 		cv2.imshow("frame: " + str(self.input_path), frame)

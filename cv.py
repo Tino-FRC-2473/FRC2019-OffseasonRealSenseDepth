@@ -18,8 +18,9 @@ class VisionTargetDetector:
 		self.config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
 		self.config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
 
-		self.pipeline.start(self.config)
-
+		prof = self.pipeline.start(self.config)
+		s = prof.get_device().query_sensors()[1]
+		s.set_option(rs.option.exposure, 50)
 		self.input_path = input
 
 		try:
@@ -31,7 +32,7 @@ class VisionTargetDetector:
 			self.input = cv2.VideoCapture(input)
 
 		
-		frame, _ = self.get_frame()
+		frame, _, _ = self.get_frame()
 
 		# height of a vision target
 		self.TARGET_HEIGHT = 5.5 * math.cos(math.radians(14.5)) + 2 * math.sin(math.radians(14.5))
@@ -80,7 +81,7 @@ class VisionTargetDetector:
 		
 
 		
-		return color_image, depth_image
+		return color_image, depth_image, depth_frame
 
 	# returns the closest pair of vision targets
 	def get_closest_pair(self, pairs):
@@ -115,7 +116,7 @@ class VisionTargetDetector:
 
 		#frame = self.get_frame()
 		
-		color_image, depth_image = self.get_frame();
+		color_image, depth_image, depth_frame = self.get_frame();
 
 		frame = color_image
 		depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
@@ -160,8 +161,8 @@ class VisionTargetDetector:
 			cv2.drawContours(frame, [pair.left_rect.box], 0, (255,0,0), 2)
 			cv2.drawContours(frame, [pair.right_rect.box], 0, (255,0,0), 2)
 
-		dist = depth_image.get_distance(self.get_center().x,self.get_center().y)
-		print("dist: ", dist)
+			dist = depth_frame.get_distance(int(pair.get_center().x), int(pair.get_center().y))
+			print("dist: ", str(dist))
 		# show windows
 		cv2.imshow("contours: " + str(self.input_path), mask)
 		cv2.imshow("frame: " + str(self.input_path), frame)

@@ -83,6 +83,27 @@ class VisionTargetDetector:
 		
 		return color_image, depth_image, depth_frame
 
+	def save_frame(frame, filepath):
+		with open(filepath, "w") as f:
+			for r in range(frame.height()):
+				for c in range(frame.width()):
+					f.write(frame.get_distance(r,c)+" ")
+				f.write("\n")
+			f.close()
+
+	def retrieve_frame(filepath):
+		arr = []
+		with open(filepath) as f:
+
+			for line in f:
+				temp = []
+				strings = line.split(" ")
+				for s in strings:
+					temp.append(int(s))
+				arr.append(temp)
+			f.close()
+		return arr
+
 	# returns the closest pair of vision targets
 	def get_closest_pair(self, pairs):
 
